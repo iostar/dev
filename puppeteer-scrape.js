@@ -6,11 +6,11 @@ import { connect } from 'puppeteer-real-browser';
 const category = process.argv[2] || 'morning';
 
 // Maparea categoriilor pe URL-urile corespunzătoare
-const urls = {
-    'morning': 'https://viata-si-sanatate.ro/resurse/devotional-zilnic',
-    'women': 'https://viata-si-sanatate.ro/resurse/devotional-pentru-femei',
-    'youth': 'https://viata-si-sanatate.ro/resurse/devotional-pentru-tineri',
-    'explorers': 'https://viata-si-sanatate.ro/resurse/devotional-exploratori'
+const URLS = {
+    morning: 'https://viatasisanatate.ro/devotional-de-dimineata',
+    women: 'https://viatasisanatate.ro/devotional-pentru-femei',
+    explorers: 'https://viatasisanatate.ro/devotional-pentru-explo',
+    youth: 'https://viatasisanatate.ro/devotional-pentru-tineri'
 };
 
 if (!urls[category]) {
