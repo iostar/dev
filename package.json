@@ -1,0 +1,8 @@
+{
+  "name": "devotionale-scraper",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "puppeteer-real-browser": "^1.4.9"
+  }
+}
