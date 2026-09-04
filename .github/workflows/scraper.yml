@@ -2,9 +2,9 @@ name: Scraping Devotional Zilnic
 
 on:
   schedule:
-    # Rulează zilnic la ora 03:30 (Ora României)
-    - cron: '30 1 * * *'
-  workflow_dispatch: # Permite rularea manuală
+    # Rulează zilnic la ora 00:30 UTC (care este ora 03:30 în România în timpul verii)
+    - cron: '30 0 * * *'
+  workflow_dispatch: # Permite lansarea manuală din interfața GitHub Actions
 
 jobs:
   run-scraper:
@@ -17,7 +17,7 @@ jobs:
       - name: Instalează Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 22
 
       - name: Instalează dependențele Linux pentru Chromium și Xvfb
         run: |
@@ -34,10 +34,9 @@ jobs:
           xvfb-run --auto-servernum node puppeteer-scrape.js youth
           xvfb-run --auto-servernum node puppeteer-scrape.js explorers
 
-      - name: Salvează și publică fișierele actualizate
+      - name: Salvează și publică modificările în GitHub
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add cache/
-          git commit -m "Auto-update devoționale: $(date)" || exit 0
-          git push
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update devotional cache [skip ci]" && git push)
