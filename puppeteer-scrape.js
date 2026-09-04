@@ -1,11 +1,8 @@
+import puppeteer from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
-import { connect } from 'puppeteer-real-browser';
 
-// Preia categoria transmisă ca argument în linia de comandă (ex: node puppeteer-scrape.js morning)
-const category = process.argv[2] || 'morning';
-
-// Maparea categoriilor pe URL-urile corespunzătoare
+// 1. Mapparea categoriilor la URL-urile actualizate ale site-ului
 const URLS = {
   morning: 'https://viatasisanatate.ro/devotional-de-dimineata',
   women: 'https://viatasisanatate.ro/devotional-pentru-femei',
@@ -13,90 +10,75 @@ const URLS = {
   youth: 'https://viatasisanatate.ro/devotional-pentru-tineri'
 };
 
+// 2. Preia categoria din argumentele liniei de comandă (ex: node puppeteer-scrape.js morning)
 const category = process.argv[2];
 
-if (!URLS[category]) {
-  console.error(`Categorie invalidă: ${category}`);
+if (!category || !URLS[category]) {
+  console.error(`Eroare: Categorie invalidă sau nedefinită "${category}". Optiuni valide: ${Object.keys(URLS).join(', ')}`);
   process.exit(1);
 }
 
 const targetUrl = URLS[category];
 
 (async () => {
-    let browser, page;
-    try {
-        // Conectare prin puppeteer-real-browser optimizată pentru servere/headless
-const response = await connect({
-    headless: 'new',
-    args: [
+  console.log(`[${category}] Începe procesul de scraping pentru: ${targetUrl}`);
+  
+  let browser;
+  try {
+    // Lansare browser Puppeteer cu argumentele necesare pentru mediu Linux (GitHub Actions / Docker)
+    browser = await puppeteer.launch({
+      headless: 'new',
+      args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage'
-    ],
-    customConfig: {
-        chromePath: process.env.CHROME_PATH || undefined
-    },
-    turnstile: true,
-    disableXvfb: true
-});
+        '--disable-dev-shm-usage',
+        '--disable-gpu'
+      ]
+    });
 
-        browser = response.browser;
-        page = response.page;
+    const page = await browser.newPage();
+    
+    // Setare User-Agent de browser real pentru a preveni blocajele
+    await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-        // Navigare către pagina devotaționalului
-        await page.goto(urls[category], { waitUntil: 'domcontentloaded', timeout: 60000 });
+    // Navigare către URL-ul țintă cu timeout extins
+    await page.goto(targetUrl, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000
+    });
 
-        // Extragerea titlului și a conținutului
-        const data = await page.evaluate(() => {
-            // Selectează titlul principal al articolului
-            const titleEl = document.querySelector('h1.entry-title, h1, .post-title');
-            const title = titleEl ? titleEl.innerText.trim() : '';
+    // Extragerea datelor din pagină (titlu, text, etc.)
+    const data = await page.evaluate(() => {
+      // Ajustează selectorii CSS în funcție de structura HTML a site-ului
+      const title = document.querySelector('h1')?.innerText?.trim() || '';
+      const contentElements = Array.from(document.querySelectorAll('article, .entry-content, .content, main p'));
+      const content = contentElements.map(el => el.innerText.trim()).filter(text => text.length > 0).join('\n\n');
 
-            // Selectează blocul principal cu textul devoționalului
-            const contentEl = document.querySelector('.entry-content, .post-content, article');
-            
-            if (contentEl) {
-                // Elimină elementele nedorite (reclame, scripturi, stiluri, navigație)
-                const unwanted = contentEl.querySelectorAll('script, style, iframe, .sharedaddy, .jp-relatedposts');
-                unwanted.forEach(el => el.remove());
-            }
+      return {
+        title,
+        content,
+        scrapedAt: new Date().toISOString()
+      };
+    });
 
-            const content = contentEl ? contentEl.innerHTML.trim() : '';
-
-            return { title, content };
-        });
-
-        if (!data.title && !data.content) {
-            throw new Error('Nu s-a putut extrage conținutul de pe pagină.');
-        }
-
-        // Asigură existența folderului cache
-        const cacheDir = path.join(process.cwd(), 'cache');
-        if (!fs.existsSync(cacheDir)) {
-            fs.mkdirSync(cacheDir, { recursive: true });
-        }
-
-        // Pregătirea structurii de date finale
-        const resultData = {
-            success: true,
-            category: category,
-            updatedAt: new Date().toISOString(),
-            title: data.title,
-            content: data.content
-        };
-
-        // Salvarea în fișierul JSON corespunzător (ex: ./cache/morning.json)
-        const filePath = path.join(cacheDir, `${category}.json`);
-        fs.writeFileSync(filePath, JSON.stringify(resultData, null, 2), 'utf-8');
-
-        console.log(JSON.stringify({ success: true, category: category }));
-
-    } catch (error) {
-        console.error(JSON.stringify({ success: false, category: category, error: error.message }));
-        process.exit(1);
-    } finally {
-        if (browser) {
-            await browser.close();
-        }
+    // Asigură-te că folderul 'cache' există
+    const cacheDir = path.join(process.cwd(), 'cache');
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
     }
+
+    // Salvează rezultatul în cache/<category>.json
+    const filePath = path.join(cacheDir, `${category}.json`);
+    fs.writeFileSync(filePath, JSON.stringify({ category, url: targetUrl, ...data }, null, 2), 'utf-8');
+
+    console.log(`[${category}] Succes! Datele au fost salvate în ${filePath}`);
+
+  } catch (error) {
+    console.error(`[${category}] Eroare în timpul scraping-ului:`, error.message);
+    process.exit(1);
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
 })();
