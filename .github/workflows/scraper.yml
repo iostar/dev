@@ -1,42 +1,46 @@
-name: Scraping Devotional Zilnic
+name: Devotional Scraper
 
 on:
   schedule:
-    # Rulează zilnic la ora 00:30 UTC (care este ora 03:30 în România în timpul verii)
-    - cron: '30 0 * * *'
-  workflow_dispatch: # Permite lansarea manuală din interfața GitHub Actions
+    # Rulează zilnic la ora 02:00 UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Permite lansarea manuală din interfața GitHub
 
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Descarcă codul din proiect
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Instalează Node.js 22
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '22'
 
-      - name: Instalează dependențele Linux pentru Chromium și Xvfb
+      - name: Install System Dependencies for Chromium
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2t64 puppeteer
+          sudo apt-get install -y xvfb libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2t64
 
-      - name: Instalează dependențele Node.js
-        run: npm install
+      - name: Install Node Dependencies
+        run: |
+          npm install puppeteer
 
-      - name: Execută scraping-ul pentru toate categoriile
+      - name: Run Scraper Scripts
         run: |
           xvfb-run --auto-servernum node puppeteer-scrape.js morning
           xvfb-run --auto-servernum node puppeteer-scrape.js women
           xvfb-run --auto-servernum node puppeteer-scrape.js youth
           xvfb-run --auto-servernum node puppeteer-scrape.js explorers
 
-      - name: Salvează și publică modificările în GitHub
+      - name: Commit and Push Updated Cache
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add cache/
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update devotional cache [skip ci]" && git push)
+          git commit -m "Auto-update devotional cache [skip ci]" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
