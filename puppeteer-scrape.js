@@ -7,16 +7,20 @@ const category = process.argv[2] || 'morning';
 
 // Maparea categoriilor pe URL-urile corespunzătoare
 const URLS = {
-    morning: 'https://viatasisanatate.ro/devotional-de-dimineata',
-    women: 'https://viatasisanatate.ro/devotional-pentru-femei',
-    explorers: 'https://viatasisanatate.ro/devotional-pentru-explo',
-    youth: 'https://viatasisanatate.ro/devotional-pentru-tineri'
+  morning: 'https://viatasisanatate.ro/devotional-de-dimineata',
+  women: 'https://viatasisanatate.ro/devotional-pentru-femei',
+  explorers: 'https://viatasisanatate.ro/devotional-pentru-explo',
+  youth: 'https://viatasisanatate.ro/devotional-pentru-tineri'
 };
 
-if (!urls[category]) {
-    console.error(JSON.stringify({ success: false, error: `Categoria '${category}' nu exista.` }));
-    process.exit(1);
+const category = process.argv[2];
+
+if (!URLS[category]) {
+  console.error(`Categorie invalidă: ${category}`);
+  process.exit(1);
 }
+
+const targetUrl = URLS[category];
 
 (async () => {
     let browser, page;
