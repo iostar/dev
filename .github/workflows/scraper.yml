@@ -1,0 +1,38 @@
+name: Scraping Devotional Zilnic
+
+on:
+  schedule:
+    # Rulează zilnic la ora 03:30 (Ora României este UTC+2/UTC+3, deci 01:30 UTC)
+    - cron: '30 1 * * *'
+  workflow_dispatch: # Permite rularea manuală dintr-un buton de test
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descarcă codul din proiect
+        uses: actions/checkout@v4
+
+      - name: Instalează Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalează dependențele
+        run: npm install
+
+      - name: Execută scraping-ul pentru toate categoriile
+        run: |
+          node puppeteer-scrape.js morning
+          node puppeteer-scrape.js women
+          node puppeteer-scrape.js youth
+          node puppeteer-scrape.js explorers
+
+      - name: Salvează și publică fișierele actualizate
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add cache/
+          git commit -m "Auto-update devoționale: $(date)" || exit 0
+          git push
