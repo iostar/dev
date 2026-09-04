@@ -22,16 +22,19 @@ if (!urls[category]) {
     let browser, page;
     try {
         // Conectare prin puppeteer-real-browser optimizată pentru servere/headless
-        const response = await connect({
-            headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage'
-            ],
-            turnstile: true,
-            disableXvfb: true
-        });
+const response = await connect({
+    headless: 'new',
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage'
+    ],
+    customConfig: {
+        chromePath: process.env.CHROME_PATH || undefined
+    },
+    turnstile: true,
+    disableXvfb: true
+});
 
         browser = response.browser;
         page = response.page;
